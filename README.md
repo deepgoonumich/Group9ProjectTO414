@@ -10,11 +10,11 @@ Code base for group9's final project TO414
 1. Did some basic data cleaning
 2. Did basic data exploration
 3. Created the following very basic models (their accuracies are next to them in the rmd file)
-    a. Logit
-    b. Linear 
-    c. KNN
-    d. ANN
-    e. SVM
+a. Logit
+b. Linear 
+c. KNN
+d. ANN
+e. SVM
 
 ### Summary and tasks ahead
 KNN Model seems to have a very high accuracy so we should discuss that with the professor
