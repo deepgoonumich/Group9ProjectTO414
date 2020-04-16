@@ -62,7 +62,7 @@ diabetes_test_labels <- diabetes_norm[401:768, 9]
 ## Models
 
 ### Logistic Model
-```{r}
+```
 # Logistic Models
 
 # First model

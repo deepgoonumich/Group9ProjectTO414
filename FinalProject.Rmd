@@ -10,10 +10,16 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 #### Import all libraries
 ```{r}
-library(class)
+## Load all the libraries
+library(stringr)
+library(lattice)
+library(ggplot2)
 library(caret)
+library(class)
 library(neuralnet)
 library(kernlab)
+library(C50)
+library(randomForest)
 ```
 
 
@@ -53,10 +59,11 @@ normalize <- function(x) {
 diabetes_norm <- as.data.frame(lapply(diabetes, normalize))
 
 # Build train and test data
-diabetes_train <- diabetes_norm[1:400, ]
-diabetes_train_labels <- diabetes_norm[1:400, 9]
-diabetes_test <- diabetes_norm[401:768, ]
-diabetes_test_labels <- diabetes_norm[401:768, 9]
+diabetes_train <- diabetes_norm[1:600, ]
+diabetes_train_labels <- diabetes_norm[1:600, 9]
+diabetes_test <- diabetes_norm[601:768, ]
+diabetes_test_labels <- diabetes_norm[601:768, 9]
+
 ```
 
 ## Models
@@ -66,94 +73,148 @@ diabetes_test_labels <- diabetes_norm[401:768, 9]
 # Logistic Models
 
 # First model
-log1<- glm(formula = diabetes$Outcome ~., family="binomial", data=diabetes)
+log1<- glm(Outcome ~., family="binomial", data=diabetes_train)
 summary(log1)
 
 # Second Model, AIC score reduced but marginally
-log2<- glm(formula = diabetes$Outcome ~ Pregnancies + Glucose + BloodPressure + BMI + DiabetesPedigreeFunction  , family="binomial", data=diabetes)
+log2<- glm(Outcome ~ Pregnancies + Glucose + BloodPressure + BMI + DiabetesPedigreeFunction  , family="binomial", data=diabetes)
 summary(log2)
 plot(log2)
-```
-### Linear Models || Current r square value: 0.2941
-```{r}
-# First Model
-lm1 <- lm(diabetes$Outcome ~ ., data=diabetes)
-summary(lm1)
 
-# Second model (R squared value reduced)
-lm2<-  lm(diabetes$Outcome ~ Pregnancies + Glucose + BloodPressure + BMI +  DiabetesPedigreeFunction, data = diabetes)
-summary(lm2)
-plot(lm2)
+#nrow(diabetes_test)
+## Predict using the best model
+for(row in 1:nrow(diabetes_test)){
+  predictor <- predict(log1, newdata = diabetes_test[row,],  type = "response")
+  predictor <- ifelse(is.na(predictor), 0, predictor)
+  
+  diabetes_test[row, "is_diabetic"] <- ifelse( predictor >= 0.005, 1, 0)
+}
 
+diabetes_test$is_diabetic
+confusionMatrix(as.factor(diabetes_test$is_diabetic), as.factor(diabetes_test_labels))
+levels(as.factor(diabetes_test$is_diabetic))
+
+## Store predictions in a different variable and make test data usable again
+log_predictions <- diabetes_test$is_diabetic
+diabetes_test$is_diabetic <- NULL
 ```
+
 
 ### KNN Model
 ```{r}
 # Build first model
-diabetes_test_pred <- knn(train = diabetes_train, test = diabetes_test,
-                      cl = diabetes_train_labels, k=28)
-confusionMatrix(table(diabetes_test_pred, diabetes_test_labels))
-
-# Build second model with optimized K (use this result)
-diabetes_test_pred <- knn(train = diabetes_train, test = diabetes_test,
+diabetes_test_pred_1 <- knn(train = diabetes_train, test = diabetes_test,
                       cl = diabetes_train_labels, k=27)
-confusionMatrix(table(diabetes_test_pred, diabetes_test_labels))
+confusionMatrix(table(diabetes_test_pred_1, diabetes_test_labels))
+
+length(diabetes_train_labels)
+
+# Build second model with optimized K: BEST MODEL
+diabetes_test_pred_2 <- knn(train = diabetes_train, test = diabetes_test,
+                      cl = diabetes_train_labels, k=26)
+
+confusionMatrix(table(diabetes_test_pred_2, diabetes_test_labels))
+
 
 # Try Z score optimization
 diabetes_z <- as.data.frame(scale(diabetes_norm))
-diabetes_test_pred <- knn(train = diabetes_train, test = diabetes_test,
-                      cl = diabetes_train_labels, k=202)
-confusionMatrix(table(diabetes_test_pred, diabetes_test_labels))
-diabetes_train <- diabetes_z[1:400, ]
-diabetes_test <- diabetes_z[401:768, ]
-diabetes_test_pred <- knn(train = diabetes_train, test = diabetes_test,
+diabetes_train_z <- diabetes_z[1:600, ]
+diabetes_test_z <- diabetes_z[601:768, ]
+
+diabetes_test_pred_3 <- knn(train = diabetes_train_z, test = diabetes_test_z,
                       cl = diabetes_train_labels, k=27)
-length(diabetes_test_pred)
-confusionMatrix(table(diabetes_test_pred, diabetes_test_labels))
+confusionMatrix(table(diabetes_test_pred_3, diabetes_test_labels))
+knn_pred <- diabetes_test_pred_2
 ```
 ### ANN model  || Current highest accuracy achieved: 74.46%
 ```{r}
-# Build train and test data
-diabetes_train <- diabetes_norm[1:400, ]
-diabetes_train_labels <- diabetes_norm[1:400, 9]
-diabetes_test <- diabetes_norm[401:768, ]
-diabetes_test_labels <- diabetes_norm[401:768, 9]
+#Model 1
+# simple ANN ith only a single hidden neuron
+diabetes_model_1 <- neuralnet(formula = Outcome ~ ., data = diabetes_train)
+plot(diabetes_model_1, rep = "best")
 
-# simple ANN with only a single hidden neuron
-diabetes_model <- neuralnet(formula = Outcome ~ ., data = diabetes_train)
-plot(diabetes_model, rep = "best")
+model_result_1 =  compute(diabetes_model_1, diabetes_test)
+predicted_strength_1 = model_result_1$net.result
 
-model_result =  compute(diabetes_model, diabetes_test)
-predicted_strength = model_result$net.result
 
-summary(predicted_strength)
-binary_ps = ifelse(predicted_strength>-0.05247,1,0)
-summary(diabetes_test)
+binary_ps_1 = ifelse(predicted_strength_1>0.6,1,0) #change this value
+
 # Build the confusion matrix
+a_1  <- as.factor(diabetes_test$Outcome)
+b_1 <- as.factor(binary_ps_1)
 
 
-a  <- as.factor(diabetes_test$Outcome)
-b <- as.factor(binary_ps)
+confusionMatrix( b_1, a_1)
 
-confusionMatrix( b, a) ##Accuracy is 74.46% which is pretty low
+
+# Model 3
+# simple ANN with only a 2 hidden neurons
+diabetes_model_3 <- neuralnet(formula = Outcome ~ ., data = diabetes_train, hidden=10)
+plot(diabetes_model_3, rep = "best")
+
+model_result_3 =  compute(diabetes_model_3, diabetes_test)
+predicted_strength_3 = model_result_3$net.result
+binary_ps_3 = ifelse(predicted_strength_3>0.6,1,0) #change this value
+
+# Build the confusion matrix
+a_3  <- as.factor(diabetes_test$Outcome)
+b_3  <- as.factor(binary_ps_3)
+
+confusionMatrix(b_3, a_3)
+
 ```
-### SVM Model || Current highest accuracy achieved: 73.64%
+## Build the SVM Model
 ```{r}
-# Build train and test data
-diabetes_train <- diabetes_norm[1:400, ]
-diabetes_train_labels <- diabetes_norm[1:400, 9]
-diabetes_test <- diabetes_norm[401:768, ]
-diabetes_test_labels <- diabetes_norm[401:768, 9]
+#diabetes_train$Outcome <- as.factor(diabetes_train$Outcome)
+#diabetes_test$Outcome <- as.factor(diabetes_test$Outcome)
 
 
-diabetes_train$Outcome <- as.factor(diabetes_train$Outcome)
-diabetes_test$Outcome <- as.factor(diabetes_test$Outcome)
-diabetes_test_labels <- as.factor(diabetes_test_labels)
+model_svm_1 <- ksvm(as.factor(Outcome) ~ ., data = diabetes_train, kernel = "vanilladot")
 
-model_svm <- ksvm(diabetes_train$Outcome ~ ., data = diabetes_train, kernel = "rbfdot")
+diabetes_predict_1 <- predict(model_svm_1, diabetes_test)
 
-diabetes_predict <- predict(model_svm, diabetes_test)
+confusionMatrix(as.factor(diabetes_predict_1), as.factor(diabetes_test_labels))
 
-confusionMatrix(diabetes_predict, diabetes_test_labels)  ##Accuracy is 73.64% which is pretty low
+model_svm_2 <- ksvm(as.factor(Outcome)  ~ ., data = diabetes_train, kernel = "rbfdot")
+
+diabetes_predict_2 <- predict(model_svm_2, diabetes_test)
+
+confusionMatrix(as.factor(diabetes_predict_2), as.factor(diabetes_test_labels))
 ```
+## Build a C5 Model 
+```{r}
+diabetes_train_labels <- as.factor(diabetes_train_labels)
+#diabetes_rf_model <- C5.0(diabetes_train, diabetes_train_labels)
 
+# Model 1
+diabetes_rf_model <- C5.0(as.factor(Outcome) ~ ., data=diabetes_train)
+diabetes_c_pred <- predict(diabetes_rf_model, diabetes_test)
+confusionMatrix(table(diabetes_c_pred, diabetes_test_labels))
+
+# Model 2, Improve by increasing number of trials
+diabetes_rf_model <- C5.0(as.factor(Outcome) ~ ., data=diabetes_train, trials=10)
+diabetes_c_pred <- predict(diabetes_rf_model, diabetes_test)
+confusionMatrix(table(diabetes_c_pred, diabetes_test_labels))
+
+# Model 3, Improve by creating a cost matrix
+error_cost <- matrix(c(0, 1, 4, 0), nrow = 2)
+diabetes_rf_model <- C5.0(as.factor(Outcome) ~ ., data=diabetes_train, trials=10, costs = error_cost)
+diabetes_c_pred <- predict(diabetes_rf_model, diabetes_test)
+confusionMatrix(table(diabetes_c_pred, diabetes_test_labels))
+
+
+plot(diabetes_rf_model)
+```
+# Random Forests
+
+
+```{r}
+set.seed(300)
+rf <- randomForest(as.factor(Outcome) ~ ., data = diabetes_train)
+
+tree_random_forest_prediction <- predict(rf, diabetes_test)
+
+plot(rf)
+
+confusionMatrix(table(tree_random_forest_prediction, diabetes_test_labels))
+```
