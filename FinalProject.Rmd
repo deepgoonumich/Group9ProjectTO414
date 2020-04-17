@@ -239,7 +239,7 @@ diabetes_predict_2 <- predict(model_svm_2, diabetes_test)
 confusionMatrix(as.factor(diabetes_predict_2), as.factor(diabetes_test_labels))
 ```
 
-### Build a C5 Model 
+### Build a Decision Tree
 ```{r}
 diabetes_train_labels <- as.factor(diabetes_train_labels)
 #diabetes_rf_model <- C5.0(diabetes_train, diabetes_train_labels)
