@@ -1,13 +1,14 @@
 ---
 title: "FinalProject"
 author: "Pablo Suarez, Deep Goon, William Schwartz, Matthew Stuart, Maximilian Howarth"
-date: "4/8/2020"
+date: "4/20/2020"
 Outcome: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
 #### Import all libraries
 ```{r}
 ## Load all the libraries
@@ -20,16 +21,65 @@ library(neuralnet)
 library(kernlab)
 library(C50)
 library(randomForest)
+library(tidyr)
+library(grid)
+library(gridExtra)
 ```
-
-
 
 ## Loading and Exploring Data
 ```{r}
 diabetes <- read.csv("diabetes.csv")
 str(diabetes)
+summary(diabetes)
 table(diabetes$Outcome)
 ```
+
+### Data Visualization 
+```{r}
+#Histogram 
+##Reshape data
+diabetes %>% gather() %>% head()
+##Plot
+ggplot(gather(diabetes), aes(value)) + 
+    geom_histogram(bins = 10) + 
+    facet_wrap(~key, scales = 'free_x')+ggtitle("Histogram of Diabetes Variables")+theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+#Scatter plot
+#Convert Outcome to Factor 
+diabetes$Outcome <- as.factor(diabetes$Outcome)
+
+##Age and Pregnancies scatterplot 
+p1 <- ggplot(data=diabetes, aes(x=Age, y=Pregnancies, colour=Outcome)) + geom_point(size=1.5, alpha=0.7)+scale_x_log10()
+##Age and Glucose scatterplot 
+p2 <- ggplot(data=diabetes, aes(x=Age, y=Glucose, colour=Outcome)) + geom_point(size=1.5, alpha=0.7)+scale_x_log10()
+##Age and BloodPressure scatterplot 
+p3 <- ggplot(data=diabetes, aes(x=Age, y=BloodPressure, colour=Outcome)) + geom_point(size=1.5, alpha=0.7)+scale_x_log10()
+##Age and SkinThickness scatterplot 
+p4 <- ggplot(data=diabetes, aes(x=Age, y=SkinThickness, colour=Outcome)) + geom_point(size=1.5, alpha=0.7)+scale_x_log10()
+##Age and Insulin scatterplot 
+p5 <- ggplot(data=diabetes, aes(x=Age, y=Insulin, colour=Outcome)) + geom_point(size=1.5, alpha=0.7)+scale_x_log10()
+##Age and DiabetesPedigreeFunction scatterplot 
+p6 <- ggplot(data=diabetes, aes(x=Age, y=DiabetesPedigreeFunction, colour=Outcome)) + geom_point(size=1.5, alpha=0.7)+scale_x_log10()+labs(y="DPF")
+##Age and BMI scatterplot 
+p7 <- ggplot(data=diabetes, aes(x=Age, y=BMI, colour=Outcome)) + geom_point(size=1.5, alpha=0.7)+scale_x_log10()
+
+##Plot together
+grid.arrange(p1, p2,p3,p4,p5,p6,p7, nrow = 4,top="Age and Other Variable Interdependency Analysis")
+
+##Convert Outcome to binary
+diabetes$Outcome <- as.numeric(levels(diabetes$Outcome))[diabetes$Outcome]
+```
+
+```{}
+The data contains 768 objects of 9 variables. All of the variables are numeric. Pregnancies indicates the number of times a person was pregnant. Glucose indicates the plasma glucose level over two hours in an oral glucose tolerance test. Blood pressure is the diastolic blood pressure in mm Hg. SkinThickness is the triceps skin fold thickness (mm). Insulin is the two-hour serum insulin (mu U/ml). BMI is the body mass index (kg/m^2). DiabetesPedigreeFunction is a function which scores the likelihood of diabetes based on family history. Age is in years, and outcome is a binary yes or no indicatior of diabetes. 268 of the 768 objects are diabetics. The data is not separated into factors and contains no NA values so it requries minimal data cleaning. 
+
+The histogram plots depict the data distributions for each variable in the diabetes data set. The Glucose, BMI, and BloodPressure variables are all normally distributed at different points. The SkinThickness variable is almost normally distributed but there is a large portion of values at 0. The DiabetesPedigreeFunction, Age, Insulin, and Pregnancies variables are skewed right with long tails. 
+
+Scatter plots were created to find potential interdependencies between age and other variables and the outcome. Green color indicates the person is diabetic, red indicates the person is not diabetic. All of the plots visually indicate that age does not correlate with the other variables so we do not need to alter our models to account for this. An interesting observation is that above a certain Glucose threshold most of the people have diabetes. 
+```
+
 
 ## Data Cleaning, Randomization and Normalization
 ```{r}
@@ -66,8 +116,8 @@ diabetes_test_labels <- diabetes_norm[601:768, 9]
 
 ```
 
-## Models
 
+## Models
 ### Logistic Model
 ```{r}
 # Logistic Models
@@ -99,6 +149,11 @@ log_predictions <- diabetes_test$is_diabetic
 diabetes_test$is_diabetic <- NULL
 ```
 
+### Base Level 
+```{r}
+# Base level of prediction
+basePredict <- round((nrow(diabetes)-length(which(diabetes$Outcome ==1)))/nrow(diabetes),3)*100
+```
 
 ### KNN Model
 ```{r}
@@ -126,6 +181,7 @@ diabetes_test_pred_3 <- knn(train = diabetes_train_z, test = diabetes_test_z,
 confusionMatrix(table(diabetes_test_pred_3, diabetes_test_labels))
 knn_pred <- diabetes_test_pred_2
 ```
+
 ### ANN model  || Current highest accuracy achieved: 74.46%
 ```{r}
 #Model 1
@@ -163,7 +219,8 @@ b_3  <- as.factor(binary_ps_3)
 confusionMatrix(b_3, a_3)
 
 ```
-## Build the SVM Model
+
+### Build the SVM Model
 ```{r}
 #diabetes_train$Outcome <- as.factor(diabetes_train$Outcome)
 #diabetes_test$Outcome <- as.factor(diabetes_test$Outcome)
@@ -181,7 +238,8 @@ diabetes_predict_2 <- predict(model_svm_2, diabetes_test)
 
 confusionMatrix(as.factor(diabetes_predict_2), as.factor(diabetes_test_labels))
 ```
-## Build a C5 Model 
+
+### Build a C5 Model 
 ```{r}
 diabetes_train_labels <- as.factor(diabetes_train_labels)
 #diabetes_rf_model <- C5.0(diabetes_train, diabetes_train_labels)
@@ -205,9 +263,8 @@ confusionMatrix(table(diabetes_c_pred, diabetes_test_labels))
 
 plot(diabetes_rf_model)
 ```
-# Random Forests
 
-
+### Random Forests
 ```{r}
 set.seed(300)
 rf <- randomForest(as.factor(Outcome) ~ ., data = diabetes_train)
@@ -218,3 +275,11 @@ plot(rf)
 
 confusionMatrix(table(tree_random_forest_prediction, diabetes_test_labels))
 ```
+
+
+## Conclusion 
+```{}
+
+```
+
+
