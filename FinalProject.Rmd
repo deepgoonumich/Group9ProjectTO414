@@ -267,6 +267,7 @@ plot(diabetes_rf_model)
 ### Random Forests
 ```{r}
 set.seed(300)
+#Random Forest with Default Settings
 rf <- randomForest(as.factor(Outcome) ~ ., data = diabetes_train)
 
 tree_random_forest_prediction <- predict(rf, diabetes_test)
@@ -274,12 +275,19 @@ tree_random_forest_prediction <- predict(rf, diabetes_test)
 plot(rf)
 
 confusionMatrix(table(tree_random_forest_prediction, diabetes_test_labels))
+
+#Auto-tune our Random Forest
+ctrl <- trainControl(method = "repeatedcv",
+                     number = 10, repeats = 10)
+
+grid_rf <- expand.grid(.mtry = c(1, 2, 3, 4, 5, 6, 7, 8))
+
+at_rf <- train(as.factor(Outcome) ~., data = diabetes_train, method = "rf",
+               metric = "Kappa", trControl = ctrl, tuneGrid = grid_rf)
+plot(at_rf)
+
+at_tree_random_forest_prediction <- predict(at_rf, diabetes_test)
+bin_at_rf_pred <- ifelse(at_tree_random_forest_prediction > 0.43, 1, 0)
+
+confusionMatrix(table(at_tree_random_forest_prediction, diabetes_test_labels))
 ```
-
-
-## Conclusion 
-```{}
-
-```
-
-
