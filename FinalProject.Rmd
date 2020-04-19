@@ -148,7 +148,6 @@ levels(as.factor(diabetes_test$is_diabetic))
 log_predictions <- diabetes_test$is_diabetic
 diabetes_test$is_diabetic <- NULL
 ```
-Starting with a logistic model helped us to identify which factors are most significant in predicting whether or not an individual will develop diabetes. One of the more interesting insights we found was that one of the strongest predictors was number of previous pregnancies- the more times a woman has been pregnant, the more likely our model found her to be diabetic. Very logically, high glucose levels and BMI indicated high diabetes risk as well. Finally, we saw a very strong relationship between diabetes pedigree and diabetes risk. This model was not our most accurate in terms of prediction, but it remains helpful in helping us understand the variables that will be most important to work with throughout this study
 
 ### Base Level 
 ```{r}
@@ -158,6 +157,8 @@ basePredict <- round((nrow(diabetes)-length(which(diabetes$Outcome ==1)))/nrow(d
 
 ### KNN Model
 ```{r}
+diabetes_test$Outcome <- NULL
+diabetes_train$Outcome <- NULL
 # Build first model
 diabetes_test_pred_1 <- knn(train = diabetes_train, test = diabetes_test,
                       cl = diabetes_train_labels, k=27)
@@ -177,15 +178,22 @@ diabetes_z <- as.data.frame(scale(diabetes_norm))
 diabetes_train_z <- diabetes_z[1:600, ]
 diabetes_test_z <- diabetes_z[601:768, ]
 
+diabetes_test_z$Outcome <- NULL
+diabetes_train_z$Outcome <- NULL
+
 diabetes_test_pred_3 <- knn(train = diabetes_train_z, test = diabetes_test_z,
                       cl = diabetes_train_labels, k=27)
 confusionMatrix(table(diabetes_test_pred_3, diabetes_test_labels))
 knn_pred <- diabetes_test_pred_2
 ```
-Our KNN, to say the least, was the most successful out of all of our models, correctly predicting all 168 individuals throughout the test data, achieving an accuracy level far above the no information rate of just over 60%. This was the case both before and after Z-score optimization, as we tested out multiple k-values that yielded 100% accuracy. We believe that while this method was highly successful, it would not have been quite 100% if we had a slightly larger sample size on which to test; the lack of variability could also be attributed to overfitting. Still, it is a valuable tool nonetheless due to its exceptional accuracy. 
 
 ### ANN model  || Current highest accuracy achieved: 74.46%
 ```{r}
+# Build train and test data
+diabetes_train <- diabetes_norm[1:600, ]
+diabetes_train_labels <- diabetes_norm[1:600, 9]
+diabetes_test <- diabetes_norm[601:768, ]
+diabetes_test_labels <- diabetes_norm[601:768, 9]
 #Model 1
 # simple ANN ith only a single hidden neuron
 diabetes_model_1 <- neuralnet(formula = Outcome ~ ., data = diabetes_train)
@@ -207,7 +215,8 @@ confusionMatrix( b_1, a_1)
 
 # Model 3
 # simple ANN with only a 2 hidden neurons
-diabetes_model_3 <- neuralnet(formula = Outcome ~ ., data = diabetes_train, hidden=10)
+
+diabetes_model_3 <- neuralnet(formula = Outcome ~ ., data = diabetes_train, hidden=3)
 plot(diabetes_model_3, rep = "best")
 
 model_result_3 =  compute(diabetes_model_3, diabetes_test)
@@ -221,7 +230,6 @@ b_3  <- as.factor(binary_ps_3)
 confusionMatrix(b_3, a_3)
 
 ```
-
 
 ### Build the SVM Model
 ```{r}
@@ -241,9 +249,8 @@ diabetes_predict_2 <- predict(model_svm_2, diabetes_test)
 
 confusionMatrix(as.factor(diabetes_predict_2), as.factor(diabetes_test_labels))
 ```
-Despite testing several different amounts of hidden neurons, we were not able to create a particularly accurate ANN or SVM model, with our accuracy peaking at 74.46% with our best ANN prediction. With our KNN, we found that rbfdot produced the most accurate results, after testing a handful of different kernels, namely vanilladot. In particular, the amount of false negatives is concerning, as a failure to catch diabetes in an at-risk patient can have dire consequences. While in an ideal situation we would hope for a higher rate of success, our models are marginally above the no information rate of 60.12%, so they will be useful in helping to create value through prediction, and will be applicable in creating composite predictions involving multiple models. 
 
-### Build a Decision Tree
+### Build a C5 Model 
 ```{r}
 diabetes_train_labels <- as.factor(diabetes_train_labels)
 #diabetes_rf_model <- C5.0(diabetes_train, diabetes_train_labels)
@@ -267,12 +274,10 @@ confusionMatrix(table(diabetes_c_pred, diabetes_test_labels))
 
 plot(diabetes_rf_model)
 ```
-In creating decision trees, the most helpful step was increasing number of trials to 10. Compared to that step (executed in model 2), creating a cost matrix actually marginally harmed the accuracy of our decision tree. The best tree we created produced an accuracy of 75%, slightly higher than any of our models other than the KNN. 
 
 ### Random Forests
 ```{r}
 set.seed(300)
-#Random Forest with Default Settings
 rf <- randomForest(as.factor(Outcome) ~ ., data = diabetes_train)
 
 tree_random_forest_prediction <- predict(rf, diabetes_test)
@@ -280,19 +285,12 @@ tree_random_forest_prediction <- predict(rf, diabetes_test)
 plot(rf)
 
 confusionMatrix(table(tree_random_forest_prediction, diabetes_test_labels))
-
-#Auto-tune our Random Forest
-ctrl <- trainControl(method = "repeatedcv",
-                     number = 10, repeats = 10)
-
-grid_rf <- expand.grid(.mtry = c(1, 2, 3, 4, 5, 6, 7, 8))
-
-at_rf <- train(as.factor(Outcome) ~., data = diabetes_train, method = "rf",
-               metric = "Kappa", trControl = ctrl, tuneGrid = grid_rf)
-plot(at_rf)
-
-at_tree_random_forest_prediction <- predict(at_rf, diabetes_test)
-bin_at_rf_pred <- ifelse(at_tree_random_forest_prediction > 0.43, 1, 0)
-
-confusionMatrix(table(at_tree_random_forest_prediction, diabetes_test_labels))
 ```
+
+
+## Conclusion 
+```{}
+
+```
+
+
