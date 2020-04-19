@@ -152,7 +152,7 @@ diabetes_test$is_diabetic <- NULL
 ```{r}{}
 Question: What are the factors and variables that can help us predict whether an individual is going to have diabetes? 
   
-Answer: The logistic model is not as accurate as some of the others we used in our study when used as a predictiv tool. However, where it really shines is its use in identifying the specific variables that are affecting outcomes. In this vein, one of the surprises from this model was the fact that more pregnancies led to a higher risk of diabetes. More logical, expected findings were that glucose levels, BMI, and diabetes pedigree had a strong positive correlation with diabetes
+Answer: The logistic model is not as accurate as some of the others we used in our study when used as a predictive tool. However, where it really shines is its use in identifying the specific variables that are affecting outcomes. In this vein, one of the surprises from this model was the fact that more pregnancies led to a higher risk of diabetes. More logical, expected findings were that glucose levels, BMI, and diabetes pedigree had a strong positive correlation with diabetes
 ```
 
 ### Base Level 
