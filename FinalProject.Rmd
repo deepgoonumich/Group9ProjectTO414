@@ -148,6 +148,7 @@ levels(as.factor(diabetes_test$is_diabetic))
 log_predictions <- diabetes_test$is_diabetic
 diabetes_test$is_diabetic <- NULL
 ```
+Starting with a logistic model helped us to identify which factors are most significant in predicting whether or not an individual will develop diabetes. One of the more interesting insights we found was that one of the strongest predictors was number of previous pregnancies- the more times a woman has been pregnant, the more likely our model found her to be diabetic. Very logically, high glucose levels and BMI indicated high diabetes risk as well. Finally, we saw a very strong relationship between diabetes pedigree and diabetes risk. This model was not our most accurate in terms of prediction, but it remains helpful in helping us understand the variables that will be most important to work with throughout this study
 
 ### Base Level 
 ```{r}
@@ -181,6 +182,7 @@ diabetes_test_pred_3 <- knn(train = diabetes_train_z, test = diabetes_test_z,
 confusionMatrix(table(diabetes_test_pred_3, diabetes_test_labels))
 knn_pred <- diabetes_test_pred_2
 ```
+Our KNN, to say the least, was the most successful out of all of our models, correctly predicting all 168 individuals throughout the test data, achieving an accuracy level far above the no information rate of just over 60%. This was the case both before and after Z-score optimization, as we tested out multiple k-values that yielded 100% accuracy. We believe that while this method was highly successful, it would not have been quite 100% if we had a slightly larger sample size on which to test; the lack of variability could also be attributed to overfitting. Still, it is a valuable tool nonetheless due to its exceptional accuracy. 
 
 ### ANN model  || Current highest accuracy achieved: 74.46%
 ```{r}
@@ -220,6 +222,7 @@ confusionMatrix(b_3, a_3)
 
 ```
 
+
 ### Build the SVM Model
 ```{r}
 #diabetes_train$Outcome <- as.factor(diabetes_train$Outcome)
@@ -238,6 +241,7 @@ diabetes_predict_2 <- predict(model_svm_2, diabetes_test)
 
 confusionMatrix(as.factor(diabetes_predict_2), as.factor(diabetes_test_labels))
 ```
+Despite testing several different amounts of hidden neurons, we were not able to create a particularly accurate ANN or SVM model, with our accuracy peaking at 74.46% with our best ANN prediction. With our KNN, we found that rbfdot produced the most accurate results, after testing a handful of different kernels, namely vanilladot. In particular, the amount of false negatives is concerning, as a failure to catch diabetes in an at-risk patient can have dire consequences. While in an ideal situation we would hope for a higher rate of success, our models are marginally above the no information rate of 60.12%, so they will be useful in helping to create value through prediction, and will be applicable in creating composite predictions involving multiple models. 
 
 ### Build a Decision Tree
 ```{r}
@@ -263,6 +267,7 @@ confusionMatrix(table(diabetes_c_pred, diabetes_test_labels))
 
 plot(diabetes_rf_model)
 ```
+In creating decision trees, the most helpful step was increasing number of trials to 10. Compared to that step (executed in model 2), creating a cost matrix actually marginally harmed the accuracy of our decision tree. The best tree we created produced an accuracy of 75%, slightly higher than any of our models other than the KNN. 
 
 ### Random Forests
 ```{r}
