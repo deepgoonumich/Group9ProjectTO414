@@ -158,7 +158,7 @@ Answer: The logistic model is not as accurate as some of the others we used in o
 ### Base Level 
 ```{r}
 # Base level of prediction
-basePredict <- round((nrow(diabetes)-length(which(diabetes$Outcome ==0)))/nrow(diabetes),3)*100
+basePredict <- round((nrow(diabetes)-length(which(diabetes$Outcome ==1)))/nrow(diabetes),3)*100
 ```
 
 ### KNN Model
@@ -297,7 +297,7 @@ confusionMatrix(table(tree_random_forest_prediction, diabetes_test_labels))
 ```{}
 Question: Which tools are best suited to help us predict the likelihood that an individual has diabetes?
   
-Answer: We created five different types of predictive models beyond the logistic model; KNN, ANN, SVM, Decision Tree, and Random Forest. All of the models had a better prediction accuracy than randomly guessing (34.9%) The first, KNN, came with some problems. Initially, the model was able to predict perfectly, with no false positives or negatives. While on the surface this seems like a good thing, it is concerning that there is no variability, suggesting that this method is not the right tool to help us answer this question. The sample size could potentially be causing this issue. Aside from this, nearly all of the models, including the second KNN, produced accuracies between 75-80%. That is not a wide range of variability, and leads us to search for another way to differentiate between the different models. 
+Answer: We created five different types of predictive models beyond the logistic model; KNN, ANN, SVM, Decision Tree, and Random Forest. All of the models had a better prediction accuracy than randomly guessing (65.1%) The first, KNN, came with some problems. Initially, the model was able to predict perfectly, with no false positives or negatives. While on the surface this seems like a good thing, it is concerning that there is no variability, suggesting that this method is not the right tool to help us answer this question. The sample size could potentially be causing this issue. Aside from this, nearly all of the models, including the second KNN, produced accuracies between 75-80%. That is not a wide range of variability, and leads us to search for another way to differentiate between the different models. 
 
 Sub-Question: What is worse, a false positive or a false negative? Which models should we look at to minimize whichever it is?
   
